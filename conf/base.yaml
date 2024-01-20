@@ -1,0 +1,21 @@
+defaults:
+  - setup
+  - _self_
+  - solver: dis
+  - target: dw_shift
+
+# General config
+seed: 1
+device:
+
+# Eval and checkpointing
+eval_marginal_dims: [0, 1]
+eval_sample_losses:
+  sinkhorn:
+    _target_: sde_sampler.eval.sinkhorn.Sinkhorn
+out_dir:
+ckpt_file: null
+store_last_ckpt: True
+upload_ckpt_to_wandb: last # Choose between True / False / "last"
+plot_results: True
+num_threads:

@@ -1,0 +1,16 @@
+# @package _global_
+defaults:
+  - oc_base
+  - /prior: gauss_truncate
+  - /sde: vp_10
+  - /model@generative_ctrl: clipped
+  - /loss: time_reversal_lv_traj
+  - _self_
+
+# Solver
+solver:
+  _target_: sde_sampler.solver.oc.Bridge
+
+# Model
+generative_ctrl:
+  clip_model: 10.

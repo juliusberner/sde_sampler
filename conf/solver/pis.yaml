@@ -1,0 +1,17 @@
+# @package _global_
+defaults:
+  - oc_base
+  - /prior: delta
+  - /sde: bm_pis
+  - /model@generative_ctrl: score
+  - /loss: reference_sde_lv_traj
+  - _self_
+
+# Solver
+solver:
+  _target_: sde_sampler.solver.oc.PIS
+
+# Model
+generative_ctrl:
+  clip_score: 10.
+  clip_model: 10.

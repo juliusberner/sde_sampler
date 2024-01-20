@@ -1,0 +1,46 @@
+# @package _global_
+
+# Base config for "Improved sampling via learned diffusions"
+defaults:
+  - _self_
+  - /lr_scheduler: step
+  - /utils@scheduler: scheduler
+  - /utils@grad_clip: grad_clip
+  - /utils@ema: ema
+
+# Train
+train_steps: 60000
+train_batch_size: 128
+train_timesteps:
+  _target_: sde_sampler.utils.common.get_timesteps
+  _partial_: True
+  start: 0.0
+  end: ${sde.terminal_t}
+  steps: 200
+max_loss: 1e10
+max_grad:
+scale_loss: ${eval:1/${target.dim}}
+clip_target:
+
+# EMA, optimizer, scheduler
+optim:
+  _target_: torch.optim.Adam
+  lr: 0.005
+  weight_decay: 1e-7
+grad_clip:
+  _target_: torch.nn.utils.clip_grad_norm_
+  _partial_: True
+  max_norm: 1.
+  norm_type: 2.0
+  error_if_nonfinite: False
+ema_device:
+
+# Eval and checkpointing
+eval_timesteps: ${train_timesteps}
+eval_batch_size: 100000
+eval_stddev_steps:
+eval_interval: 500
+eval_device:
+eval_init: True
+ckpt_interval:
+log_interval: 50

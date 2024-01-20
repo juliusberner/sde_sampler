@@ -1,0 +1,11 @@
+_target_: sde_sampler.models.mlp.DenseNet
+dim: ${target.dim}
+arch: [200, 200]
+activation: 
+  _target_: torch.nn.ReLU
+last_bias_init:
+  _target_: torch.nn.init.zeros_
+  _partial_: True
+last_weight_init:
+  _target_: torch.nn.init.zeros_
+  _partial_: True

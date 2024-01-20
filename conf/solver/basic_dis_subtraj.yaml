@@ -1,0 +1,22 @@
+# @package _global_
+defaults:
+  - basic_oc_base
+  - /prior: gauss
+  - /sde: vp_10
+  - /model@generative_ctrl: potential
+  - /loss: time_reversal
+  - _self_
+
+# Solver
+solver:
+  _target_: sde_sampler.solver.oc.SubtrajBridge
+
+# Subtraj
+subtraj_prob: 0.5
+fix_terminal: True
+subtraj_steps:
+lerp_domain: True
+
+# Loss
+loss:
+  method: lv

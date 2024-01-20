@@ -1,0 +1,9 @@
+# SDE-solver
+_target_: sde_sampler.eq.integrator.TorchSDEIntegrator
+adjoint: False
+stratonovich: True
+sdeint_kwargs:
+  dt: 0.01
+  dt_min: 0.0005
+  adaptive: True
+  method: heun

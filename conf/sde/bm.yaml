@@ -1,0 +1,3 @@
+_target_: sde_sampler.eq.sdes.ScaledBM
+diff_coeff: 1.
+terminal_t: 1.0

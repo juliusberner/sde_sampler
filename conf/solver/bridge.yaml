@@ -1,0 +1,29 @@
+# @package _global_
+defaults:
+  - oc_base
+  - /prior: gauss_truncate
+  - /sde: bm
+  - /model@generative_ctrl: lerp
+  - /model@inference_ctrl: lerp
+  - /loss: time_reversal
+  - _self_
+
+# Solver
+solver:
+  _target_: sde_sampler.solver.oc.Bridge
+
+train_batch_size: 2048
+
+# Model
+generative_ctrl:
+  _target_: sde_sampler.models.reparam.LerpTargetCtrl
+  clip_score: 10.
+  clip_model: 10.
+
+inference_ctrl:
+  _target_: sde_sampler.models.reparam.LerpPriorCtrl
+  name: inference_ctrl
+  # We need to compute the divergence
+  detach_score: False
+  clip_score: 10.
+  clip_model: 10.

@@ -1,0 +1,31 @@
+# @package _global_
+
+# Train
+train_steps: 10000
+train_batch_size: 512
+train_timesteps:
+  _target_: sde_sampler.utils.common.get_timesteps
+  _partial_: True
+  start: 0.0
+  end: ${sde.terminal_t}
+  steps: 100
+max_loss:
+max_grad:
+scale_loss:
+clip_target:
+
+# EMA, optimizer, scheduler
+ema_device:
+optim:
+  _target_: torch.optim.Adam
+  lr: 0.001
+
+# Eval and checkpointing
+eval_timesteps: ${train_timesteps}
+eval_batch_size: 6000
+eval_stddev_steps:
+eval_interval: 500
+eval_device:
+eval_init: True
+ckpt_interval:
+log_interval: 50

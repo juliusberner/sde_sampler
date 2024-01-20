@@ -1,0 +1,3 @@
+_target_: sde_sampler.distr.gauss.IsotropicGauss
+dim: ${target.dim}
+truncate_quartile: 1e-4

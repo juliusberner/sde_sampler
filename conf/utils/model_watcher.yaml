@@ -1,0 +1,9 @@
+# Include in your defaults:
+# ```
+# defaults:
+#   - /utils@model_watcher: model_watcher
+# ```
+
+_target_: wandb.watch
+log: gradients
+log_freq: ${eval_interval}

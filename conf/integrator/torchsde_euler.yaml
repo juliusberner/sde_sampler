@@ -1,0 +1,9 @@
+# SDE-solver
+_target_: sde_sampler.eq.integrator.TorchSDEIntegrator
+adjoint: False
+sdeint_kwargs:
+  dt: 0.01
+  method: euler
+brownian_interval_kwargs:
+  dt: ${integrator.sdeint_kwargs.dt}
+  cache_size: null

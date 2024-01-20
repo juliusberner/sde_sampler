@@ -1,0 +1,5 @@
+_target_: sde_sampler.eq.sdes.VP
+diff_coeff_sq_min: 0.1
+diff_coeff_sq_max: 10.
+scale_diff_coeff: 1.
+terminal_t: 1.0

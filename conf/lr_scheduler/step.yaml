@@ -1,0 +1,3 @@
+_target_: torch.optim.lr_scheduler.StepLR
+step_size: 100
+gamma: ${eval:"0.02**(100/${train_steps})"}

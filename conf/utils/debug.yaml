@@ -1,0 +1,8 @@
+# Include in your defaults:
+# ```
+# defaults:
+#   - /utils@setup: debug
+# ```
+
+- _target_: torch.autograd.set_detect_anomaly
+  mode: True

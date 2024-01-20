@@ -1,0 +1,9 @@
+_target_: sde_sampler.distr.aladip.AlaDip
+dim: 60
+temperature: 300                  # Double, temperature of the system
+energy_cut: 1e8                 # Double, energy level at which regularization shall be applied
+energy_max: 1e20                # Double, maximum level at which energies will be clamped
+n_threads: 18                     # Int, number of threads to be used
+transform: internal               # String, type of the transformation
+shift_dih: False                  # Bool, flag whether to shift dihedral angles
+env: implicit                     # String, environment of the molecule, can be implicit or vacuum

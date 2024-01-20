@@ -1,0 +1,2 @@
+_target_: sde_sampler.distr.delta.Delta
+dim: ${target.dim}

@@ -1,0 +1,2 @@
+_target_: sde_sampler.distr.cox.Cox
+dim: 1600

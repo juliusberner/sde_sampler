@@ -1,0 +1,4 @@
+_target_: sde_sampler.distr.gauss.GMM
+dim: 2
+name: "grid"
+n_reference_samples: 1000000

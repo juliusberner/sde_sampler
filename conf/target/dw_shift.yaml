@@ -1,0 +1,4 @@
+_target_: sde_sampler.distr.double_well.DoubleWell
+separation: 2.0
+dim: 1
+shift: 1.5

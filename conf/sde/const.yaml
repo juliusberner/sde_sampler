@@ -1,0 +1,4 @@
+_target_: sde_sampler.eq.sdes.ConstOU
+drift_coeff: 4.5
+diff_coeff: 3.0
+terminal_t: 1.0

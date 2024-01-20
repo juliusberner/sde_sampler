@@ -1,0 +1,3 @@
+_target_: sde_sampler.eq.sdes.ScaledBM
+diff_coeff: 0.4472135954999579 # sqrt(0.2)
+terminal_t: 5.0

@@ -1,0 +1,29 @@
+# @package _global_
+defaults:
+  - /integrator: euler
+  - _self_
+
+solver:
+  _target_: sde_sampler.solver.langevin.LangevinSolver
+
+# SDE
+sde:
+  _target_: sde_sampler.eq.sdes.LangevinSDE
+  diff_coeff: 1.0
+  terminal_t: 100.0
+  clip_score: 1e5
+
+# Prior
+prior:
+  _target_: sde_sampler.distr.gauss.IsotropicGauss
+  dim: ${target.dim}
+
+# Eval
+eval_timesteps:
+  _target_: sde_sampler.utils.common.get_timesteps
+  _partial_: True
+  start: 0.0
+  end: ${sde.terminal_t}
+  steps: 1000
+eval_expectation_burn: 500
+eval_batch_size: 6000

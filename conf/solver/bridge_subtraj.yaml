@@ -1,0 +1,38 @@
+# @package _global_
+defaults:
+  - oc_base
+  - /prior: gauss
+  - /sde: vp_10
+  - /model@generative_ctrl: potential
+  - /model@inference_ctrl: potential
+  - /loss: time_reversal
+  - _self_
+
+# Solver
+solver:
+  _target_: sde_sampler.solver.oc.SubtrajBridge
+
+# Subtraj
+subtraj_prob: 0.5
+fix_terminal: False
+subtraj_steps:
+lerp_domain: True
+
+# Loss
+loss:
+  method: lv
+  max_rnd: 1e4
+
+train_batch_size: 2048
+
+# Model
+generative_ctrl:
+  clip_model: 10.
+
+inference_ctrl:
+  clip_model: 10.
+  name: inference_ctrl
+
+# EMA, optimizer, scheduler
+optim:
+  lr: 0.001

@@ -1,0 +1,13 @@
+# Include in your defaults:
+# ```
+# defaults:
+#   - /utils@ema: ema
+# ```
+
+_target_: sde_sampler.solver.base.EMA
+decay: 0.9999
+inv_gamma: 1
+power: 0.9
+update_after_step: ${eval:${train_steps}-1500}
+update_every: 5
+min_value: 0.0

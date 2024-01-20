@@ -1,0 +1,8 @@
+# @package _global_
+defaults:
+- override /hydra/launcher: joblib
+
+hydra:
+  job:
+    env_set:
+      CUDA_VISIBLE_DEVICES: ${get_free_gpu:${hydra:job.num}}

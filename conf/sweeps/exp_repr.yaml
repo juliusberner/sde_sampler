@@ -1,0 +1,18 @@
+# invoke the sweep using `wandb sweep conf/sweeps/xyz.yaml`
+program: scripts/main.py
+name: exp_repr
+project: sde_sampler
+method: grid
+parameters:
+  solver:
+    values: [pis, dis]
+  target:
+    values: [gmm, funnel, mw, mw_50d]
+  loss.method:
+    values: [lv_traj, kl]
+
+command:
+  - ${env}
+  - python
+  - ${program}
+  - ${args_no_hyphens}

@@ -1,0 +1,36 @@
+# Wandb
+wandb:
+  project: sde_sampler
+  resume: allow
+  mode: run
+  name:
+  tags:
+  id:
+
+# Setup keops
+keops_build_path: ${oc.env:HOME,logs}/.cache/keops/${oc.env:HOSTNAME,unknown}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+
+# Wandb resuming
+merge_wandb_resume_cfg: True
+restore_ckpt_from_wandb: True
+
+# Hydra
+hydra:
+  run:
+    dir: logs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+    dir: ${hydra.run.dir}
+    subdir: ${hydra.job.override_dirname}
+  job:
+    env_set: 
+      WANDB_START_METHOD: thread
+      NUMEXPR_MAX_THREADS: 8
+    config:
+      override_dirname:
+        exclude_keys:
+          - launcher
+          - ckpt_file
+          - wandb.project
+          - wandb.id
+        kv_sep: .
+        item_sep: "-"

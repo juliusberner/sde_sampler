@@ -1,0 +1,18 @@
+# @package _global_
+defaults:
+  - basic_oc_base
+  - /prior: gauss
+  - /sde: bm
+  - /model@generative_ctrl: lerp_target
+  - /model@inference_ctrl: lerp_prior
+  - /loss: time_reversal
+  - _self_
+
+# Solver
+solver:
+  _target_: sde_sampler.solver.oc.Bridge
+
+inference_ctrl:
+  name: inference_ctrl
+  # We need to compute the divergence
+  detach_score: False

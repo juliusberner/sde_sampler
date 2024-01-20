@@ -1,0 +1,12 @@
+_target_: sde_sampler.models.mlp.FourierMLP
+dim: ${target.dim}
+num_layers: 4
+channels: 64
+activation: 
+  _target_: torch.nn.GELU
+last_bias_init:
+  _target_: torch.nn.init.zeros_
+  _partial_: True
+last_weight_init:
+  _target_: torch.nn.init.zeros_
+  _partial_: True
