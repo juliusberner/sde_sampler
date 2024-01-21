@@ -230,6 +230,48 @@ class PIS(TrainableDiff):
             return_traj=return_traj,
         )
 
+class DDSExponential(TrainableDiff):
+    # This implements the basic DDS algorithm
+    # with the exponential integrator
+    # https://arxiv.org/abs/2302.13834
+    save_attrs = TrainableDiff.save_attrs + ["loss"]
+
+    def setup_models(self):
+        super().setup_models()
+        if not isinstance(self.prior, Gauss):
+            raise ValueError("Can only be used with Gaussian prior.")
+
+        # prior = reference_distr for terminal loss
+        self.reference_distr = self.prior 
+        self.loss: BaseOCLoss = instantiate(
+            self.cfg.loss,
+            generative_ctrl=self.generative_ctrl,
+            sde=self.sde,
+            filter_samples=getattr(self.target, "filter", None),
+        )
+
+    def _compute_loss(
+        self, ts: torch.Tensor, x: torch.Tensor
+    ) -> tuple[torch.Tensor, dict]:
+        return self.loss(
+            ts, x, self.clipped_target_unnorm_log_prob, self.reference_distr.log_prob
+        )
+
+    def _compute_results(
+        self,
+        ts: torch.Tensor,
+        x: torch.Tensor,
+        compute_weights: bool = True,
+        return_traj: bool = True,
+    ) -> Results:
+        return self.loss.eval(
+            ts,
+            x,
+            self.clipped_target_unnorm_log_prob,
+            self.reference_distr.log_prob,
+            compute_weights=compute_weights,
+            return_traj=return_traj,
+        )
 
 class DDS(TrainableDiff):
     # This implementation induces the same objectives in the DDS paper (https://arxiv.org/abs/2302.13834).

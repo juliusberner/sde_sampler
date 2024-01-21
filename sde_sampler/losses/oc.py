@@ -369,3 +369,111 @@ class ReferenceSDELoss(BaseOCLoss):
         return BaseOCLoss.compute_results(
             rnd, compute_weights=compute_weights, ts=ts, samples=samples, xs=xs
         )
+
+class ExponentialIntegratorSDELoss(BaseOCLoss):
+    def __init__(self, *args, **kwargs):
+        # Only loss.method = KL implemented
+        super().__init__(*args, **kwargs)
+        self.alpha = kwargs.get("alpha", 1)
+        self.sigma = kwargs.get("sigma", 1)
+    def simulate(
+        self,
+        ts: torch.Tensor,
+        x: torch.Tensor,
+        terminal_unnorm_log_prob: Callable,
+        reference_log_prob: Callable | None = None,# unused
+        compute_ito_int: bool = False,
+        change_sde_ctrl: bool = False,
+        return_traj: bool = False,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
+        # Initial cost
+
+        if change_sde_ctrl:
+            raise NotImplementedError
+
+        rnd = 0.0
+
+        xs = [x] if return_traj else None
+
+        # Simulate
+        # s,t = old time, new time
+        for s, t in zip(ts[:-1], ts[1:]): 
+            # Evaluate
+            generative_ctrl = self.generative_ctrl(s, x)
+            dt = t - s
+
+            # Exponential Scheme as implemented by Vargas et.al
+            beta_k = torch.clip(self.alpha_vargas * dt.sqrt(), 0, 1)
+            alpha_k = torch.sqrt(1.0 - beta_k**2)
+
+            rnd += 0.5 * (beta_k**2) * (self.sigma_vargas ** 2) * (generative_ctrl**2).sum(dim=-1, keepdim=True) 
+
+            noise = torch.randn_like(x) 
+
+            x = x * alpha_k + (beta_k ** 2) * (self.sigma_vargas ** 2) * generative_ctrl + self.sigma_vargas * beta_k * noise 
+
+            # Compute ito integral for importance sampling 
+            if compute_ito_int:
+                rnd += (self.sigma_vargas * generative_ctrl * noise * beta_k).sum(dim=-1, keepdim=True)
+
+            if return_traj:
+                xs.append(x)
+
+        # compute reference log prob value based on based in prior
+        reference_log_prob_value = reference_log_prob(x)
+        rnd += reference_log_prob_value - terminal_unnorm_log_prob(x)
+
+        assert rnd.shape == (x.shape[0], 1) # one loss number for each sample
+
+        if return_traj:
+            xs = torch.stack(xs)
+
+        return x, rnd, xs
+
+    def __call__(
+        self,
+        ts: torch.Tensor,
+        x: torch.Tensor,
+        terminal_unnorm_log_prob: Callable,
+        reference_log_prob: Callable,
+    ) -> tuple[torch.Tensor, dict]:
+        # Repeat initial values
+        if self.traj_per_sample != 1:
+            x = x.repeat(self.traj_per_sample, 1, 1).reshape(-1, x.shape[-1])
+
+        # Simulate
+        compute_ito_int = self.method != "kl"
+        change_sde_ctrl = self.method in ["lv", "lv_traj"]
+        samples, rnd, _ = self.simulate(
+            ts,
+            x,
+            terminal_unnorm_log_prob=terminal_unnorm_log_prob,
+            reference_log_prob=reference_log_prob,
+            compute_ito_int=compute_ito_int,
+            change_sde_ctrl=change_sde_ctrl,
+            return_traj=False,
+        )
+
+        return self.compute_loss(rnd, samples=samples)
+
+    def eval(
+        self,
+        ts: torch.Tensor,
+        x: torch.Tensor,
+        terminal_unnorm_log_prob: Callable,
+        reference_log_prob: Callable | None = None,
+        compute_weights: bool = True,
+        return_traj: bool = True,
+    ) -> Results:
+        samples, rnd, xs = self.simulate(
+            ts,
+            x,
+            terminal_unnorm_log_prob=terminal_unnorm_log_prob,
+            reference_log_prob=reference_log_prob,
+            compute_ito_int=compute_weights,
+            change_sde_ctrl=False,
+            return_traj=return_traj,
+        )
+        return BaseOCLoss.compute_results(
+            rnd, compute_weights=compute_weights, ts=ts, samples=samples, xs=xs
+        )

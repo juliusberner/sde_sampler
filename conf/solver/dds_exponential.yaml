@@ -9,7 +9,7 @@ defaults:
 
 # Solver
 solver:
-  _target_: diffeq_sampler.solver.oc.DDS
+  _target_: diffeq_sampler.solver.oc.DDSExponential
 
 train_timesteps:
   rescale_t: "cosine"
