@@ -387,7 +387,7 @@ class ExponentialIntegratorSDELoss(BaseOCLoss):
         ts: torch.Tensor,
         x: torch.Tensor,
         terminal_unnorm_log_prob: Callable,
-        reference_log_prob: Callable | None = None,  # unused
+        reference_log_prob: Callable | None = None,  
         compute_ito_int: bool = False,
         change_sde_ctrl: bool = False,
         return_traj: bool = False,
