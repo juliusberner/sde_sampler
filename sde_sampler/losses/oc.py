@@ -21,7 +21,7 @@ class BaseOCLoss:
         max_rnd: float | None = None,
         sde_ctrl_dropout: float | None = None,
         sde_ctrl_noise: float | None = None,
-        **kwargs
+        **kwargs,
     ):
         self.generative_ctrl = generative_ctrl
         self.sde = sde
@@ -43,7 +43,9 @@ class BaseOCLoss:
             if self.method in ["kl", "kl_ito"]:
                 for attr in ["sde_ctrl_noise", "sde_ctrl_dropout"]:
                     if getattr(self, attr) is not None:
-                        logging.warning("%s should only be used for the log-variance loss.")
+                        logging.warning(
+                            "%s should only be used for the log-variance loss."
+                        )
 
         # Metrics
         self.n_filtered = 0
@@ -372,18 +374,20 @@ class ReferenceSDELoss(BaseOCLoss):
             rnd, compute_weights=compute_weights, ts=ts, samples=samples, xs=xs
         )
 
+
 class ExponentialIntegratorSDELoss(BaseOCLoss):
     def __init__(self, *args, **kwargs):
         # Only loss.method = KL implemented
         super().__init__(*args, **kwargs)
         self.alpha = kwargs.get("alpha", 1)
         self.sigma = kwargs.get("sigma", 1)
+
     def simulate(
         self,
         ts: torch.Tensor,
         x: torch.Tensor,
         terminal_unnorm_log_prob: Callable,
-        reference_log_prob: Callable | None = None,# unused
+        reference_log_prob: Callable | None = None,  # unused
         compute_ito_int: bool = False,
         change_sde_ctrl: bool = False,
         return_traj: bool = False,
@@ -399,7 +403,7 @@ class ExponentialIntegratorSDELoss(BaseOCLoss):
 
         # Simulate
         # s,t = old time, new time
-        for s, t in zip(ts[:-1], ts[1:]): 
+        for s, t in zip(ts[:-1], ts[1:]):
             # Evaluate
             generative_ctrl = self.generative_ctrl(s, x)
             dt = t - s
@@ -408,15 +412,26 @@ class ExponentialIntegratorSDELoss(BaseOCLoss):
             beta_k = torch.clip(self.alpha * dt.sqrt(), 0, 1)
             alpha_k = torch.sqrt(1.0 - beta_k**2)
 
-            rnd += 0.5 * (beta_k**2) * (self.sigma ** 2) * (generative_ctrl**2).sum(dim=-1, keepdim=True) 
+            rnd += (
+                0.5
+                * (beta_k**2)
+                * (self.sigma**2)
+                * (generative_ctrl**2).sum(dim=-1, keepdim=True)
+            )
 
-            noise = torch.randn_like(x) 
+            noise = torch.randn_like(x)
 
-            x = x * alpha_k + (beta_k ** 2) * (self.sigma ** 2) * generative_ctrl + self.sigma * beta_k * noise 
+            x = (
+                x * alpha_k
+                + (beta_k**2) * (self.sigma**2) * generative_ctrl
+                + self.sigma * beta_k * noise
+            )
 
-            # Compute ito integral for importance sampling 
+            # Compute ito integral for importance sampling
             if compute_ito_int:
-                rnd += (self.sigma * generative_ctrl * noise * beta_k).sum(dim=-1, keepdim=True)
+                rnd += (self.sigma * generative_ctrl * noise * beta_k).sum(
+                    dim=-1, keepdim=True
+                )
 
             if return_traj:
                 xs.append(x)
@@ -425,7 +440,7 @@ class ExponentialIntegratorSDELoss(BaseOCLoss):
         reference_log_prob_value = reference_log_prob(x)
         rnd += reference_log_prob_value - terminal_unnorm_log_prob(x)
 
-        assert rnd.shape == (x.shape[0], 1) # one loss number for each sample
+        assert rnd.shape == (x.shape[0], 1)  # one loss number for each sample
 
         if return_traj:
             xs = torch.stack(xs)

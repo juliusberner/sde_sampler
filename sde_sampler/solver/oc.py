@@ -230,6 +230,7 @@ class PIS(TrainableDiff):
             return_traj=return_traj,
         )
 
+
 class DDS(TrainableDiff):
     # This implements the basic DDS algorithm
     # with the intended exponential integrator
@@ -242,7 +243,7 @@ class DDS(TrainableDiff):
             raise ValueError("Can only be used with Gaussian prior.")
 
         # prior = reference_distr for terminal loss
-        self.reference_distr = self.prior 
+        self.reference_distr = self.prior
         self.loss: BaseOCLoss = instantiate(
             self.cfg.loss,
             generative_ctrl=self.generative_ctrl,
@@ -272,6 +273,7 @@ class DDS(TrainableDiff):
             compute_weights=compute_weights,
             return_traj=return_traj,
         )
+
 
 class EulerDDS(TrainableDiff):
     # This implementation induces the same objectives in the DDS paper (https://arxiv.org/abs/2302.13834).
