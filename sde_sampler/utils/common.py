@@ -51,14 +51,7 @@ def get_timesteps(
             (torch.tensor([start], device=device), torch.cumsum(dts, -1))
         )
 
-        # New Adaptation for this repo:
-        # We remove excess 1s at end
-        ptr = len(dts_out)
-        eps = 1e-6
-        while abs(dts_out[ptr - 1] - end) < eps * end:
-            ptr -= 1
-
-        return dts_out[:ptr]
+        return dts_out
     raise ValueError("Unkown timestep rescaling method.")
 
 
