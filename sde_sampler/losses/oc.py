@@ -37,7 +37,7 @@ class BaseOCLoss:
         self.max_rnd = max_rnd
 
         # SDE controls
-        if self.sde != None:
+        if self.sde is not None:
             self.sde_ctrl_noise = sde_ctrl_noise
             self.sde_ctrl_dropout = sde_ctrl_dropout
             if self.method in ["kl", "kl_ito"]:
