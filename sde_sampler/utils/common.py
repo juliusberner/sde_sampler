@@ -4,7 +4,6 @@ import math
 from collections import namedtuple
 
 import torch
-import numpy as np
 
 import wandb
 
@@ -42,7 +41,7 @@ def get_timesteps(
         """
         s = 0.008 # Choice from original paper
         pre_phase = torch.linspace(start, end, steps + 1, device=device) / end
-        phase = ((pre_phase + s) / (1 + s)) * np.pi * 0.5
+        phase = ((pre_phase + s) / (1 + s)) * torch.pi * 0.5
 
         dts = torch.cos(phase)**4
 

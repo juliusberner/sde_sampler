@@ -230,9 +230,9 @@ class PIS(TrainableDiff):
             return_traj=return_traj,
         )
 
-class DDSExponential(TrainableDiff):
+class DDS(TrainableDiff):
     # This implements the basic DDS algorithm
-    # with the exponential integrator
+    # with the intended exponential integrator
     # https://arxiv.org/abs/2302.13834
     save_attrs = TrainableDiff.save_attrs + ["loss"]
 
@@ -273,7 +273,7 @@ class DDSExponential(TrainableDiff):
             return_traj=return_traj,
         )
 
-class DDS(TrainableDiff):
+class EulerDDS(TrainableDiff):
     # This implementation induces the same objectives in the DDS paper (https://arxiv.org/abs/2302.13834).
     # However, we do not use the exponential integrator and the same parametrization.
     save_attrs = TrainableDiff.save_attrs + ["loss"]

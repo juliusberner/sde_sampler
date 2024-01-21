@@ -9,4 +9,4 @@ defaults:
 
 # Solver
 solver:
-  _target_: sde_sampler.solver.oc.DDS
+  _target_: sde_sampler.solver.oc.EulerDDS
