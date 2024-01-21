@@ -37,7 +37,7 @@ class TrainableDiff(Trainable):
 
     def setup_models(self):
         self.prior: Distribution = instantiate(self.cfg.prior)
-        self.sde: OU = instantiate(self.cfg.sde)
+        self.sde: OU = instantiate(self.cfg.get("sde"))
         self.generative_ctrl: Module = instantiate(
             self.cfg.generative_ctrl,
             sde=self.sde,

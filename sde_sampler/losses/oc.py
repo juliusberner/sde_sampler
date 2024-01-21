@@ -14,13 +14,14 @@ class BaseOCLoss:
     def __init__(
         self,
         generative_ctrl: Callable,
-        sde: OU,
+        sde: OU | None = None,
         method: str = "kl",
         traj_per_sample: int = 1,
         filter_samples: Callable | None = None,
         max_rnd: float | None = None,
         sde_ctrl_dropout: float | None = None,
         sde_ctrl_noise: float | None = None,
+        **kwargs
     ):
         self.generative_ctrl = generative_ctrl
         self.sde = sde
@@ -36,12 +37,13 @@ class BaseOCLoss:
         self.max_rnd = max_rnd
 
         # SDE controls
-        self.sde_ctrl_noise = sde_ctrl_noise
-        self.sde_ctrl_dropout = sde_ctrl_dropout
-        if self.method in ["kl", "kl_ito"]:
-            for attr in ["sde_ctrl_noise", "sde_ctrl_dropout"]:
-                if getattr(self, attr) is not None:
-                    logging.warning("%s should only be used for the log-variance loss.")
+        if self.sde != None:
+            self.sde_ctrl_noise = sde_ctrl_noise
+            self.sde_ctrl_dropout = sde_ctrl_dropout
+            if self.method in ["kl", "kl_ito"]:
+                for attr in ["sde_ctrl_noise", "sde_ctrl_dropout"]:
+                    if getattr(self, attr) is not None:
+                        logging.warning("%s should only be used for the log-variance loss.")
 
         # Metrics
         self.n_filtered = 0
@@ -403,18 +405,18 @@ class ExponentialIntegratorSDELoss(BaseOCLoss):
             dt = t - s
 
             # Exponential Scheme as implemented by Vargas et.al
-            beta_k = torch.clip(self.alpha_vargas * dt.sqrt(), 0, 1)
+            beta_k = torch.clip(self.alpha * dt.sqrt(), 0, 1)
             alpha_k = torch.sqrt(1.0 - beta_k**2)
 
-            rnd += 0.5 * (beta_k**2) * (self.sigma_vargas ** 2) * (generative_ctrl**2).sum(dim=-1, keepdim=True) 
+            rnd += 0.5 * (beta_k**2) * (self.sigma ** 2) * (generative_ctrl**2).sum(dim=-1, keepdim=True) 
 
             noise = torch.randn_like(x) 
 
-            x = x * alpha_k + (beta_k ** 2) * (self.sigma_vargas ** 2) * generative_ctrl + self.sigma_vargas * beta_k * noise 
+            x = x * alpha_k + (beta_k ** 2) * (self.sigma ** 2) * generative_ctrl + self.sigma * beta_k * noise 
 
             # Compute ito integral for importance sampling 
             if compute_ito_int:
-                rnd += (self.sigma_vargas * generative_ctrl * noise * beta_k).sum(dim=-1, keepdim=True)
+                rnd += (self.sigma * generative_ctrl * noise * beta_k).sum(dim=-1, keepdim=True)
 
             if return_traj:
                 xs.append(x)
