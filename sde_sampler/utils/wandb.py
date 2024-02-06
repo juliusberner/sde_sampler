@@ -4,11 +4,11 @@ import logging
 from pathlib import Path
 
 import plotly.graph_objects as go
+import wandb
 from matplotlib import pyplot as plt
 from omegaconf import DictConfig, OmegaConf
 from PIL.Image import Image
 
-import wandb
 from sde_sampler.utils.common import CKPT_DIR
 
 

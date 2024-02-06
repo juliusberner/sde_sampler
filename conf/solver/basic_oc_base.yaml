@@ -23,6 +23,7 @@ optim:
 # Eval and checkpointing
 eval_timesteps: ${train_timesteps}
 eval_batch_size: 6000
+eval_ode: True
 eval_stddev_steps:
 eval_interval: 500
 eval_device:

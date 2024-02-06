@@ -21,7 +21,7 @@ lerp_domain: True
 # Loss
 loss:
   method: lv
-  max_rnd: 1e4
+  max_log_rnd: 1e4
 
 train_batch_size: 2048
 
