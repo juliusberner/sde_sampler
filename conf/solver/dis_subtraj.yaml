@@ -19,7 +19,7 @@ lerp_domain: True
 
 # Loss
 loss:
-  max_rnd: 1e4
+  max_log_rnd: 1e4
 
 # Model
 generative_ctrl:

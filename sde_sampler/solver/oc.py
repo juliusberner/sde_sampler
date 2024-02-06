@@ -14,8 +14,10 @@ from sde_sampler.distr.gauss import Gauss
 from sde_sampler.eq.integrator import EulerIntegrator
 from sde_sampler.eq.sdes import OU, ControlledSDE
 from sde_sampler.eval.plots import get_plots
+from sde_sampler.losses.base import ODELoss
 from sde_sampler.losses.oc import BaseOCLoss
 from sde_sampler.solver.base import Trainable
+from sde_sampler.utils.autograd import compute_divx
 from sde_sampler.utils.common import Results, clip_and_log
 
 
@@ -152,6 +154,10 @@ class Bridge(TrainableDiff):
             filter_samples=getattr(self.target, "filter", None),
         )
 
+        self.ode_loss = None
+        if self.cfg.get("eval_ode", True):
+            self.ode_loss = ODELoss(divdrift_and_drift=self.ode_divdrift_and_drift)
+
     def _compute_loss(
         self, ts: torch.Tensor, x: torch.Tensor
     ) -> tuple[torch.Tensor, dict]:
@@ -162,6 +168,23 @@ class Bridge(TrainableDiff):
             initial_log_prob=self.prior.log_prob,
         )
 
+    def ode_ctrl(self, t: torch.Tensor, x: torch.Tensor):
+        # Nelson's identity
+        diff_log_grad_density = 0.5 * self.generative_ctrl(t, x)
+        if self.inference_ctrl is not None:
+            diff_log_grad_density -= self.inference_ctrl(t, x)
+        return diff_log_grad_density
+
+    def ode_divdrift_and_drift(
+        self, t: torch.Tensor, x: torch.Tensor, create_graph=False
+    ):
+        div_ctrl, ctrl = compute_divx(self.ode_ctrl, t, x, create_graph=create_graph)
+        diff = self.sde.diff(t, x)
+        # This assumes that the diffusion coefficient is independent of x
+        drift = self.sde.drift(t, x) + diff * ctrl
+        div_drift = self.sde.drift_div(t, x) + diff * div_ctrl
+        return div_drift, drift
+
     def _compute_results(
         self,
         ts: torch.Tensor,
@@ -169,7 +192,7 @@ class Bridge(TrainableDiff):
         compute_weights: bool = True,
         return_traj: bool = True,
     ) -> Results:
-        return self.loss.eval(
+        results = self.loss.eval(
             ts,
             x,
             self.clipped_target_unnorm_log_prob,
@@ -177,6 +200,23 @@ class Bridge(TrainableDiff):
             compute_weights=compute_weights,
             return_traj=return_traj,
         )
+        if self.ode_loss is not None and compute_weights:
+            ode_results = self.ode_loss.eval(
+                ts,
+                x,
+                self.clipped_target_unnorm_log_prob,
+                initial_log_prob=self.prior.log_prob,
+                compute_weights=compute_weights,
+            )
+            metrics, plots = self.get_metrics_and_plots(
+                results=ode_results, target_plots=False
+            )
+            results.plots.update({f"{k}_ode": v for k, v in plots.items()})
+            results.metrics.update({f"{k}_ode": v for k, v in metrics.items()})
+            results.log_norm_const_preds.update(
+                {f"{k}_ode": v for k, v in ode_results.log_norm_const_preds.items()}
+            )
+        return results
 
 
 class PIS(TrainableDiff):

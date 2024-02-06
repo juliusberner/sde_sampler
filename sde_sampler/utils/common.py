@@ -1,16 +1,23 @@
 from __future__ import annotations
 
 import math
-from collections import namedtuple
+from dataclasses import dataclass, field
 
 import torch
 import wandb
 
-Results = namedtuple(
-    "Results",
-    "samples weights log_norm_const_preds expectation_preds ts xs metrics plots",
-    defaults=[{}, {}, None, None, None, None, {}, {}],
-)
+
+@dataclass
+class Results:
+    samples: torch.Tensor
+    weights: torch.Tensor | None = None
+    log_norm_const_preds: dict = field(default_factory=dict)
+    expectation_preds: dict = field(default_factory=dict)
+    ts: torch.Tensor | None = None
+    xs: torch.Tensor | None = None
+    metrics: dict = field(default_factory=dict)
+    plots: dict = field(default_factory=dict)
+
 
 CKPT_DIR = "ckpt"
 

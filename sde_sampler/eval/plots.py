@@ -217,6 +217,7 @@ def get_plots(
     decimals: int = 6,
     nbins: int = 100,
     domain: torch.Tensor | None = None,
+    plot_distr: bool = True,
 ) -> dict[str, go.Figure]:
     plots = {}
     marginal_dims = marginal_dims or []
@@ -253,7 +254,7 @@ def get_plots(
             domain=domain,
         )
 
-    if hasattr(distr, "sample"):
+    if plot_distr and hasattr(distr, "sample"):
         gt_samples = distr.sample((samples.shape[0],))
         for dim1, dim2 in itertools.combinations(marginal_dims, r=2):
             plots[f"plots/groundtruth_density_{dim1}_{dim2}"] = plot_marginal_2d(

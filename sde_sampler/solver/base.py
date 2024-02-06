@@ -111,10 +111,14 @@ class Solver(torch.nn.Module):
         self.initialized = True
 
     def get_metrics_and_plots(
-        self, results: Results, decimals: int = 6, nbins: int = 100
+        self,
+        results: Results,
+        decimals: int = 6,
+        nbins: int = 100,
+        target_plots: bool = True,
     ) -> tuple[dict, dict]:
-        metrics = results.metrics
-        plots = results.plots
+        metrics = results.metrics.copy()
+        plots = results.plots.copy()
 
         metrics["eval/overall_time"] = time.time() - self.initial_time
         if results.samples is not None:
@@ -133,9 +137,10 @@ class Solver(torch.nn.Module):
                         marginal_dims=self.eval_marginal_dims,
                         decimals=decimals,
                         nbins=nbins,
+                        plot_distr=target_plots,
                     )
                 )
-                if hasattr(self.target, "plots"):
+                if target_plots and hasattr(self.target, "plots"):
                     plots.update(self.target.plots(results.samples))
 
             eval_metrics = get_metrics(

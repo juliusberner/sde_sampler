@@ -13,7 +13,7 @@ import wandb
 import yaml
 from hydra.core.hydra_config import HydraConfig
 from hydra.utils import instantiate
-from omegaconf import DictConfig, OmegaConf, open_dict
+from omegaconf import DictConfig, OmegaConf
 
 from sde_sampler.utils import hydra as hydra_utils
 from sde_sampler.utils.wandb import merge_wandb_cfg

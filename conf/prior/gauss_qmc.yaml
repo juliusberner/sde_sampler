@@ -1,0 +1,7 @@
+_target_: sde_sampler.distr.gauss.IsotropicGauss
+dim: ${target.dim}
+truncate_quartile: 1e-4
+sampler:
+  _target_: sde_sampler.distr.base.HaltonEngine
+  dim: ${target.dim}
+  scramble: True

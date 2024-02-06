@@ -6,35 +6,24 @@ from typing import Callable
 import torch
 
 from sde_sampler.eq.sdes import OU
+from sde_sampler.losses.base import BaseSDELoss
 from sde_sampler.utils.autograd import compute_divx
 from sde_sampler.utils.common import Results
 
 
-class BaseOCLoss:
+class BaseOCLoss(BaseSDELoss):
     def __init__(
         self,
+        *args,
         generative_ctrl: Callable,
-        sde: OU | None = None,
-        method: str = "kl",
-        traj_per_sample: int = 1,
-        filter_samples: Callable | None = None,
-        max_rnd: float | None = None,
+        sde: OU,
         sde_ctrl_dropout: float | None = None,
         sde_ctrl_noise: float | None = None,
         **kwargs,
     ):
+        super().__init__(*args, **kwargs)
         self.generative_ctrl = generative_ctrl
         self.sde = sde
-        if method not in ["kl", "kl_ito", "lv", "lv_traj"]:
-            raise ValueError("Unknown loss method.")
-        self.method = method
-        if traj_per_sample == 1 and self.method == "lv_traj":
-            raise ValueError("Cannot compute variance over a single trajectory.")
-        self.traj_per_sample = traj_per_sample
-
-        # Filter
-        self.filter_samples = filter_samples
-        self.max_rnd = max_rnd
 
         # SDE controls
         self.sde_ctrl_noise = sde_ctrl_noise
@@ -43,19 +32,6 @@ class BaseOCLoss:
             for attr in ["sde_ctrl_noise", "sde_ctrl_dropout"]:
                 if getattr(self, attr) is not None:
                     logging.warning("%s should only be used for the log-variance loss.")
-
-        # Metrics
-        self.n_filtered = 0
-
-    def filter(
-        self, rnd: torch.Tensor, samples: torch.Tensor | None = None
-    ) -> torch.Tensor:
-        mask = True
-        if samples is not None and self.filter_samples is not None:
-            mask = self.filter_samples(samples)
-        if self.max_rnd is None:
-            return mask & rnd.isfinite()
-        return mask & (rnd < self.max_rnd)
 
     def generative_and_sde_ctrl(
         self, t: torch.Tensor, x: torch.Tensor
@@ -69,72 +45,19 @@ class BaseOCLoss:
             sde_ctrl[mask] = -(self.sde.drift(t, x) / self.sde.diff(t, x))[mask]
         return generative_ctrl, sde_ctrl
 
-    def compute_loss(
-        self, rnd: torch.Tensor, samples: torch.Tensor | None = None
-    ) -> tuple[torch.Tensor, dict]:
-        # Compute loss
-        mask = self.filter(rnd, samples=samples)
-        assert mask.shape == rnd.shape
-        if self.method == "lv_traj":
-            # compute variance over the trajectories
-            rnd = rnd.reshape(self.traj_per_sample, -1, 1)
-            mask = mask.reshape(self.traj_per_sample, -1, 1)
-            mask = mask.all(dim=0)
-            self.n_filtered += self.traj_per_sample * (mask.numel() - mask.sum()).item()
-            loss = rnd[:, mask].var(dim=0).mean()
-        else:
-            self.n_filtered += (mask.numel() - mask.sum()).item()
-            if self.method == "lv":
-                loss = rnd[mask].var()
-            else:
-                loss = rnd[mask].mean()
-
-        return loss, {"train/n_filtered_cumulative": self.n_filtered}
-
     @staticmethod
     def compute_results(
-        rnd: torch.Tensor,
+        log_rnd: torch.Tensor,
         compute_weights: bool = False,
         ts: torch.Tensor | None = None,
         samples: torch.Tensor | None = None,
         xs: torch.Tensor | None = None,
     ):
-        metrics = {}
-        neg_rnd = -rnd
+        results = BaseSDELoss.compute_results(log_rnd, compute_weights, ts, samples, xs)
         if compute_weights:
-            # Compute importance weights
-            log_weights_max = neg_rnd.max()
-            weights = (neg_rnd - log_weights_max).exp()
-            log_norm_const_preds = {
-                "log_norm_const_lb_ito": neg_rnd.mean().item(),
-                "log_norm_const_is": (weights.mean().log() + log_weights_max).item(),
-            }
-            metrics["eval/lv_loss"] = rnd.var().item()
-        else:
-            weights = None
-            log_norm_const_preds = {"log_norm_const_lb": neg_rnd.mean().item()}
-        return Results(
-            samples=samples,
-            weights=weights,
-            log_norm_const_preds=log_norm_const_preds,
-            ts=ts,
-            xs=xs,
-            metrics=metrics,
-        )
-
-    def __call__(
-        self, ts: torch.Tensor, x: torch.Tensor, *args, **kwargs
-    ) -> tuple[torch.Tensor, dict]:
-        raise NotImplementedError
-
-    def eval(self, ts: torch.Tensor, x: torch.Tensor, *args, **kwargs) -> Results:
-        raise NotImplementedError
-
-    def load_state_dict(self, state_dict: dict):
-        self.n_filtered = state_dict["n_filtered"]
-
-    def state_dict(self) -> dict:
-        return {"n_filtered": self.n_filtered}
+            log_norm_const_lb = results.log_norm_const_preds.pop("log_norm_const_lb")
+            results.log_norm_const_preds["log_norm_const_lb_ito"] = log_norm_const_lb
+        return results
 
 
 class TimeReversalLoss(BaseOCLoss):
@@ -166,10 +89,10 @@ class TimeReversalLoss(BaseOCLoss):
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
         # Initial cost
         if train and self.method in ["kl", "kl_ito"]:
-            rnd = 0.0
+            log_rnd = 0.0
         else:
-            rnd = initial_log_prob(x)
-            assert rnd.shape == (x.shape[0], 1)
+            log_rnd = initial_log_prob(x)
+            assert log_rnd.shape == (x.shape[0], 1)
 
         xs = [x] if return_traj else None
         # Simulate
@@ -197,18 +120,18 @@ class TimeReversalLoss(BaseOCLoss):
                 )
 
                 # This assumes the diffusion coeff. to be independent of x
-                rnd += sde_diff * div_ctrl * dt
+                log_rnd += sde_diff * div_ctrl * dt
                 gen_plus_inf_ctrl = generative_ctrl + inference_ctrl
                 gen_minus_inf_ctrl = generative_ctrl - inference_ctrl
 
             if change_sde_ctrl:
                 cost = gen_plus_inf_ctrl * (sde_ctrl - 0.5 * gen_minus_inf_ctrl)
-                rnd += cost.sum(dim=-1, keepdim=True) * dt
+                log_rnd += cost.sum(dim=-1, keepdim=True) * dt
             else:
-                rnd += 0.5 * (gen_plus_inf_ctrl**2).sum(dim=-1, keepdim=True) * dt
+                log_rnd += 0.5 * (gen_plus_inf_ctrl**2).sum(dim=-1, keepdim=True) * dt
 
             if not train:
-                rnd -= self.sde.drift_div_int(s, t, x)
+                log_rnd -= self.sde.drift_div_int(s, t, x)
 
             # Euler-Maruyama
             db = torch.randn_like(x) * dt.sqrt()
@@ -216,25 +139,25 @@ class TimeReversalLoss(BaseOCLoss):
 
             # Compute ito integral
             if compute_ito_int:
-                rnd += (gen_plus_inf_ctrl * db).sum(dim=-1, keepdim=True)
+                log_rnd += (gen_plus_inf_ctrl * db).sum(dim=-1, keepdim=True)
 
             if return_traj:
                 xs.append(x)
 
         # Terminal cost
-        rnd -= terminal_unnorm_log_prob(x)
-        assert rnd.shape == (x.shape[0], 1)
+        log_rnd -= terminal_unnorm_log_prob(x)
+        assert log_rnd.shape == (x.shape[0], 1)
 
         if return_traj:
             xs = torch.stack(xs)
-        return x, rnd, xs
+        return x, log_rnd, xs
 
     def __call__(
         self,
         ts: torch.Tensor,
         x: torch.Tensor,
         terminal_unnorm_log_prob: Callable,
-        initial_log_prob: Callable | None,
+        initial_log_prob: Callable | None = None,
     ) -> tuple[torch.Tensor, dict]:
         # Repeat initial values
         if self.traj_per_sample != 1:
@@ -243,7 +166,7 @@ class TimeReversalLoss(BaseOCLoss):
         # Simulate
         compute_ito_int = self.method != "kl"
         change_sde_ctrl = self.method in ["lv", "lv_traj"]
-        samples, rnd, _ = self.simulate(
+        samples, log_rnd, _ = self.simulate(
             ts,
             x,
             terminal_unnorm_log_prob=terminal_unnorm_log_prob,
@@ -253,18 +176,18 @@ class TimeReversalLoss(BaseOCLoss):
             train=True,
             return_traj=False,
         )
-        return self.compute_loss(rnd, samples=samples)
+        return self.compute_loss(log_rnd, samples=samples)
 
     def eval(
         self,
         ts: torch.Tensor,
         x: torch.Tensor,
         terminal_unnorm_log_prob: Callable,
-        initial_log_prob: Callable | None = None,
+        initial_log_prob: Callable,
         compute_weights: bool = True,
         return_traj: bool = True,
     ) -> Results:
-        samples, rnd, xs = self.simulate(
+        samples, log_rnd, xs = self.simulate(
             ts,
             x,
             terminal_unnorm_log_prob=terminal_unnorm_log_prob,
@@ -274,7 +197,7 @@ class TimeReversalLoss(BaseOCLoss):
             return_traj=return_traj,
         )
         return BaseOCLoss.compute_results(
-            rnd, compute_weights=compute_weights, ts=ts, samples=samples, xs=xs
+            log_rnd, compute_weights=compute_weights, ts=ts, samples=samples, xs=xs
         )
 
 
@@ -294,7 +217,7 @@ class ReferenceSDELoss(BaseOCLoss):
         return_traj: bool = False,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
         # Initial cost
-        rnd = 0.0
+        log_rnd = 0.0
 
         xs = [x] if return_traj else None
         # Simulate
@@ -318,9 +241,11 @@ class ReferenceSDELoss(BaseOCLoss):
 
             if change_sde_ctrl:
                 running_cost = gen_minus_ref_ctrl * (sde_ctrl - 0.5 * gen_plus_ref_ctrl)
-                rnd += running_cost.sum(dim=-1, keepdim=True) * dt
+                log_rnd += running_cost.sum(dim=-1, keepdim=True) * dt
             else:
-                rnd += 0.5 * (gen_minus_ref_ctrl**2).sum(dim=-1, keepdim=True) * dt
+                log_rnd += (
+                    0.5 * (gen_minus_ref_ctrl**2).sum(dim=-1, keepdim=True) * dt
+                )
 
             # Euler-Maruyama
             db = torch.randn_like(x) * dt.sqrt()
@@ -328,19 +253,19 @@ class ReferenceSDELoss(BaseOCLoss):
 
             # Compute ito integral
             if compute_ito_int:
-                rnd += (gen_minus_ref_ctrl * db).sum(dim=-1, keepdim=True)
+                log_rnd += (gen_minus_ref_ctrl * db).sum(dim=-1, keepdim=True)
 
             if return_traj:
                 xs.append(x)
 
         # Terminal cost
-        rnd += reference_log_prob(x) - terminal_unnorm_log_prob(x)
-        assert rnd.shape == (x.shape[0], 1)
+        log_rnd += reference_log_prob(x) - terminal_unnorm_log_prob(x)
+        assert log_rnd.shape == (x.shape[0], 1)
 
         if return_traj:
             xs = torch.stack(xs)
 
-        return x, rnd, xs
+        return x, log_rnd, xs
 
     def __call__(
         self,
@@ -356,7 +281,7 @@ class ReferenceSDELoss(BaseOCLoss):
         # Simulate
         compute_ito_int = self.method != "kl"
         change_sde_ctrl = self.method in ["lv", "lv_traj"]
-        samples, rnd, _ = self.simulate(
+        samples, log_rnd, _ = self.simulate(
             ts,
             x,
             terminal_unnorm_log_prob=terminal_unnorm_log_prob,
@@ -366,7 +291,7 @@ class ReferenceSDELoss(BaseOCLoss):
             return_traj=False,
         )
 
-        return self.compute_loss(rnd, samples=samples)
+        return self.compute_loss(log_rnd, samples=samples)
 
     def eval(
         self,
@@ -377,7 +302,7 @@ class ReferenceSDELoss(BaseOCLoss):
         compute_weights: bool = True,
         return_traj: bool = True,
     ) -> Results:
-        samples, rnd, xs = self.simulate(
+        samples, log_rnd, xs = self.simulate(
             ts,
             x,
             terminal_unnorm_log_prob=terminal_unnorm_log_prob,
@@ -387,7 +312,7 @@ class ReferenceSDELoss(BaseOCLoss):
             return_traj=return_traj,
         )
         return BaseOCLoss.compute_results(
-            rnd, compute_weights=compute_weights, ts=ts, samples=samples, xs=xs
+            log_rnd, compute_weights=compute_weights, ts=ts, samples=samples, xs=xs
         )
 
 

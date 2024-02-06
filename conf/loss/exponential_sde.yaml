@@ -2,6 +2,6 @@
 _target_: sde_sampler.losses.oc.ExponentialIntegratorSDELoss
 method: kl
 traj_per_sample: 1
-max_rnd:
+max_log_rnd:
 alpha: 1.
 sigma: 1.

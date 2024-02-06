@@ -8,6 +8,7 @@ from typing import Callable
 
 import torch
 import torchquad
+from scipy.stats import qmc
 
 EXPECTATION_FNS: dict[str, Callable] = {
     "square": lambda x: (x**2).sum(dim=-1, keepdims=True),
@@ -180,3 +181,86 @@ def rejection_sampling(
         new_shape = (n_samples - samples.shape[0],)
         new_samples = rejection_sampling(new_shape, proposal, target, scaling)
         return torch.concat([samples.reshape(*shape, -1), new_samples])
+
+
+class RandomEngine:
+    def __init__(self, dim: int, scramble: bool = False, seed: int | None = None):
+        self.dim = dim
+        self.scramble = scramble
+        self.seed = seed
+
+        # sampler
+        self.sampler = None
+        self.reset()
+
+    def reset(self):
+        raise NotImplementedError
+
+    def fast_forward(self, n: int):
+        raise NotImplementedError
+
+    def draw(
+        self,
+        n: int = 1,
+        dtype: torch.dtype = torch.float32,
+        device: torch.device | str = "cpu",
+    ) -> torch.Tensor:
+        raise NotImplementedError
+
+    @staticmethod
+    def rand_to_randn(rand):
+        return torch.erfinv(2 * rand - 1) * math.sqrt(2)
+
+    def rand(
+        self,
+        shape,
+        dtype: torch.dtype = torch.float32,
+        device: torch.device | str = "cpu",
+    ) -> torch.Tensor:
+        tensor = self.draw(n=math.prod(shape), dtype=dtype, device=device)
+        return tensor.reshape(*shape, self.dim)
+
+    def randn(
+        self,
+        shape,
+        dtype: torch.dtype = torch.float32,
+        device: torch.device | str = "cpu",
+    ) -> torch.Tensor:
+        rand = self.rand(shape, dtype=dtype, device=device)
+        return RandomEngine.rand_to_randn(rand)
+
+
+class SobolEngine(RandomEngine):
+    def reset(self):
+        self.sampler = torch.quasirandom.SobolEngine(
+            self.dim, scramble=self.scramble, seed=self.seed
+        )
+
+    def fast_forward(self, n: int):
+        self.sampler.fast_forward(n)
+
+    def draw(
+        self,
+        n: int = 1,
+        dtype: torch.dtype = torch.float32,
+        device: torch.device | str = "cpu",
+    ) -> torch.Tensor:
+        tensor = self.sampler.draw(n=n, dtype=dtype)
+        return tensor.to(device)
+
+
+class HaltonEngine(RandomEngine):
+    def reset(self):
+        self.sampler = qmc.Halton(d=self.dim, scramble=self.scramble, seed=self.seed)
+
+    def fast_forward(self, n: int):
+        self.sampler.fast_forward(n)
+
+    def draw(
+        self,
+        n: int = 1,
+        dtype: torch.dtype = torch.float32,
+        device: torch.device | str = "cpu",
+    ) -> torch.Tensor:
+        points = self.sampler.random(n=n)
+        return torch.from_numpy(points).to(dtype=dtype, device=device)

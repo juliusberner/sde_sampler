@@ -2,6 +2,6 @@
 _target_: sde_sampler.losses.oc.TimeReversalLoss
 method: lv
 traj_per_sample: 1
-max_rnd: 1e8
+max_log_rnd: 1e8
 sde_ctrl_noise:
 sde_ctrl_dropout:

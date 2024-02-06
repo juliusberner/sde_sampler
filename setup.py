@@ -16,6 +16,7 @@ setup(
         "hydra-submitit-launcher==1.2.0",
         # torch additions
         "torchsde==0.2.6",
+        "torchdiffeq==0.2.3",
         "torchquad==0.4.0",
         "torch_ema==0.3",
         "pykeops==2.1.2",
