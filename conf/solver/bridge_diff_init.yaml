@@ -22,3 +22,10 @@ generative_ctrl:
 inference_ctrl:
   name: inference_ctrl
   clip_model: 10.
+
+param_groups:
+  inference_ctrl:
+    lr: ${eval:"${optim.lr}*0.02"}
+  generative_ctrl:
+    lr: ${optim.lr}
+  

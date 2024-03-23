@@ -283,9 +283,20 @@ class Trainable(Solver):
         self.max_grad: float | None = self.cfg.get("max_grad")
         self.max_loss: float | None = self.cfg.get("max_loss")
         self.scale_loss: float | None = self.cfg.get("scale_loss")
-        self.optim: torch.optim.Optimizer = instantiate(
-            self.cfg.optim, params=self.trainable_parameters()
+
+        if self.cfg.get("param_groups"):
+            parameters = [
+                {"params": getattr(self, name).parameters(), **options}
+                for name, options in self.cfg.param_groups.items()
+            ]
+        else:
+            parameters = self.trainable_parameters()
+        self.optim: torch.optim.Optimizer = instantiate(self.cfg.optim, parameters)
+        assert sum(p.numel() for p in self.trainable_parameters()) == sum(
+            sum(p.numel() for p in group["params"]) for group in self.optim.param_groups
         )
+
+        # Scheduler
         schedulers = []
         if self.cfg.get("lr_scheduler"):
             schedulers.append(instantiate(self.cfg.lr_scheduler, optimizer=self.optim))
@@ -503,7 +514,8 @@ class CombinedScheduler:
                 output.update(scheduler.get())
             # This assumes the optimizer to adhere to the pytorch api
             elif hasattr(scheduler, "optimizer"):
-                output["lr"] = scheduler.optimizer.param_groups[0]["lr"]
+                for i, group in enumerate(scheduler.optimizer.param_groups):
+                    output[f"lr_{i}"] = group["lr"]
         return output
 
     def step(self):

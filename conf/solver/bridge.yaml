@@ -27,3 +27,10 @@ inference_ctrl:
   detach_score: False
   clip_score: 10.
   clip_model: 10.
+
+param_groups:
+  inference_ctrl:
+    lr: ${eval:"${optim.lr}*0.02"}
+  generative_ctrl:
+    lr: ${optim.lr}
+  
