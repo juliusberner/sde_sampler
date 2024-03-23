@@ -14,12 +14,12 @@ from pathlib import Path
 
 import numpy as np
 import torch
+import wandb
 import yaml
 from hydra.utils import call, instantiate
 from omegaconf import DictConfig, OmegaConf
 from torch_ema import ExponentialMovingAverage
 
-import wandb
 from sde_sampler.distr.base import Distribution
 from sde_sampler.eval.metrics import get_metrics
 from sde_sampler.eval.plots import get_plots, save_fig

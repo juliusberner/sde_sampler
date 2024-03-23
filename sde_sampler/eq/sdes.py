@@ -125,7 +125,7 @@ class OU(TorchSDE):
 class ConstOU(OU):
     def __init__(self, drift_coeff: float = 2.0, diff_coeff: float = 2.0, **kwargs):
         if drift_coeff < 0 or diff_coeff <= 0:
-            raise ValueError("Choose non-positive drift_coeff and positive diff_coeff.")
+            raise ValueError("Choose non-negative drift_coeff and positive diff_coeff.")
         super().__init__(**kwargs)
         self.register_buffer(
             "drift_coeff",
