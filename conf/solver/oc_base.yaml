@@ -17,7 +17,7 @@ train_timesteps:
   start: 0.0
   end: ${sde.terminal_t}
   steps: 200
-max_loss: 1e10
+max_loss:
 max_grad:
 scale_loss: ${eval:1/${target.dim}}
 clip_target:

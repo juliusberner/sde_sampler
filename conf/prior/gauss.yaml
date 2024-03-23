@@ -1,2 +1,2 @@
-_target_: sde_sampler.distr.gauss.Gauss
+_target_: sde_sampler.distr.gauss.IsotropicGauss
 dim: ${target.dim}

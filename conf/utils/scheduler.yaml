@@ -11,4 +11,3 @@
     generative_ctrl.clip_score: 5.
     inference_ctrl.clip_model: 5.
     inference_ctrl.clip_score: 5.
-    max_loss: 1e-4
