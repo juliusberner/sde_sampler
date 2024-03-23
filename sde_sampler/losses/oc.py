@@ -137,16 +137,27 @@ class BaseOCLoss:
 
 
 class TimeReversalLoss(BaseOCLoss):
-    def __init__(self, *args, inference_ctrl: Callable | None = None, **kwargs):
+    def __init__(
+        self,
+        *args,
+        inference_ctrl: Callable | None = None,
+        div_estimator: str | None = None,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         self.inference_ctrl = inference_ctrl
+        self.div_estimator = div_estimator
+        if self.div_estimator is not None and self.inference_ctrl is None:
+            logging.warning(
+                "Without inference control the divergence estimator has no effect."
+            )
 
     def simulate(
         self,
         ts: torch.Tensor,
         x: torch.Tensor,
         terminal_unnorm_log_prob: Callable,
-        initial_log_prob: Callable | None,
+        initial_log_prob: Callable | None = None,
         train: bool = True,
         compute_ito_int: bool = False,
         change_sde_ctrl: bool = False,
@@ -175,7 +186,15 @@ class TimeReversalLoss(BaseOCLoss):
                 gen_plus_inf_ctrl = gen_minus_inf_ctrl = generative_ctrl
 
             else:
-                div_ctrl, inference_ctrl = compute_divx(self.inference_ctrl, s, x)
+                div_estimator = self.div_estimator if train else None
+                div_ctrl, inference_ctrl = compute_divx(
+                    self.inference_ctrl,
+                    s,
+                    x,
+                    noise_type=div_estimator,
+                    create_graph=train,
+                )
+
                 # This assumes the diffusion coeff. to be independent of x
                 rnd += sde_diff * div_ctrl * dt
                 gen_plus_inf_ctrl = generative_ctrl + inference_ctrl
