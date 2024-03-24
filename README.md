@@ -138,7 +138,7 @@ Our predefined solvers in [`conf/solver`](conf/solver) include the following met
 
 1. **Time-Reversed Diffusion Sampler (DIS)** `solver=dis` (see our [paper](https://arxiv.org/abs/2211.01364))
 
-2. **Denoising Diffusion Sampler (DDS)** `solver=dds` (see the [DDS repo](https://github.com/franciscovargas/denoising_diffusion_samplers); Note we provide another version as well, using `solver=dds_euler` which uses the euler integrator for dds instead) 
+2. **Denoising Diffusion Sampler (DDS)** `solver=dds` (see the [DDS repo](https://github.com/franciscovargas/denoising_diffusion_samplers); Note we provide another version as well, using `solver=dds_euler` which uses the Euler integrator for DDS instead) 
 
 3. **Path Integral Sampler (PIS)** `solver=pis` (see the [PIS repo](https://github.com/qsh-zh/pis))
 

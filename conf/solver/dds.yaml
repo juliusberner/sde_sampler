@@ -14,15 +14,9 @@ solver:
 train_timesteps:
   rescale_t: "cosine"
   steps: 
-  end: 25.6 
+  end: 6.4
   dt: 0.05
 
-train_steps: 11000 
-train_batch_size: 300
-eval_batch_size: 2000
-
-optim:
-  lr: 0.001
 
 prior:
   scale: ${loss.sigma}

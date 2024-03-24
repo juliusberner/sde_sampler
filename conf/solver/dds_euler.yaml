@@ -11,7 +11,4 @@ defaults:
 solver:
   _target_: sde_sampler.solver.oc.EulerDDS
 
-# Model
-generative_ctrl:
-  clip_score: 10.
-  clip_model: 10.
+
