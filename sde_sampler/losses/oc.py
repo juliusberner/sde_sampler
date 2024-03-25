@@ -35,17 +35,11 @@ class BaseOCLoss:
         # Filter
         self.filter_samples = filter_samples
         self.max_rnd = max_rnd
-
+        self.sde_ctrl_noise = sde_ctrl_noise
+        self.sde_ctrl_dropout = sde_ctrl_dropout
         # SDE controls
-        if self.sde is not None:
-            self.sde_ctrl_noise = sde_ctrl_noise
-            self.sde_ctrl_dropout = sde_ctrl_dropout
-            if self.method in ["kl", "kl_ito"]:
-                for attr in ["sde_ctrl_noise", "sde_ctrl_dropout"]:
-                    if getattr(self, attr) is not None:
-                        logging.warning(
-                            "%s should only be used for the log-variance loss."
-                        )
+        if self.sde is not None and self.method in ["kl", "kl_ito"]:
+            raise ValueError("Method should only be used for the log-variance loss.")
 
         # Metrics
         self.n_filtered = 0
@@ -389,13 +383,8 @@ class ExponentialIntegratorSDELoss(BaseOCLoss):
         terminal_unnorm_log_prob: Callable,
         reference_log_prob: Callable | None = None,  
         compute_ito_int: bool = False,
-        change_sde_ctrl: bool = False,
         return_traj: bool = False,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
-        # Initial cost
-
-        if change_sde_ctrl:
-            raise NotImplementedError
 
         rnd = 0.0
 
@@ -460,14 +449,12 @@ class ExponentialIntegratorSDELoss(BaseOCLoss):
 
         # Simulate
         compute_ito_int = self.method != "kl"
-        change_sde_ctrl = self.method in ["lv", "lv_traj"]
         samples, rnd, _ = self.simulate(
             ts,
             x,
             terminal_unnorm_log_prob=terminal_unnorm_log_prob,
             reference_log_prob=reference_log_prob,
             compute_ito_int=compute_ito_int,
-            change_sde_ctrl=change_sde_ctrl,
             return_traj=False,
         )
 
@@ -488,7 +475,6 @@ class ExponentialIntegratorSDELoss(BaseOCLoss):
             terminal_unnorm_log_prob=terminal_unnorm_log_prob,
             reference_log_prob=reference_log_prob,
             compute_ito_int=compute_weights,
-            change_sde_ctrl=False,
             return_traj=return_traj,
         )
         return BaseOCLoss.compute_results(

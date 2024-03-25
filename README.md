@@ -148,7 +148,7 @@ Our predefined solvers in [`conf/solver`](conf/solver) include the following met
 
 The configs with prefix `basic_` in [`conf/solver`](conf/solver) are simplified and can easily be adapted to specific [targets](#targets) or settings. 
 
-For the first four solvers, you can use either the KL divergence `loss.method=kl` or the log-variance divergence `loss.method=lv` (see our [paper](https://arxiv.org/abs/2307.01198)).
+For all solvers except langevin and dds, you can use either the KL divergence `loss.method=kl` or the log-variance divergence `loss.method=lv` (see our [paper](https://arxiv.org/abs/2307.01198)).
 For the first three solvers, the log-variance divergence can also be computed over trajectories with the same initial point by using `loss.method=lv_traj`.
 In most of our experiments, the log-variance divergence led to improved performance.
 
