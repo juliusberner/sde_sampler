@@ -138,7 +138,7 @@ Our predefined solvers in [`conf/solver`](conf/solver) include the following met
 
 1. **Time-Reversed Diffusion Sampler (DIS)** `solver=dis` (see our [paper](https://arxiv.org/abs/2211.01364))
 
-2. **Denoising Diffusion Sampler (DDS)** `solver=dds` (see the [DDS repo](https://github.com/franciscovargas/denoising_diffusion_samplers); note that this is *not* the original implementation since we are using another parametrization and integrator)
+2. **Denoising Diffusion Sampler (DDS)** `solver=dds` (see the [DDS repo](https://github.com/franciscovargas/denoising_diffusion_samplers); Note we provide another version as well, using `solver=dds_euler` which uses the Euler integrator for DDS instead) 
 
 3. **Path Integral Sampler (PIS)** `solver=pis` (see the [PIS repo](https://github.com/qsh-zh/pis))
 
@@ -148,7 +148,7 @@ Our predefined solvers in [`conf/solver`](conf/solver) include the following met
 
 The configs with prefix `basic_` in [`conf/solver`](conf/solver) are simplified and can easily be adapted to specific [targets](#targets) or settings. 
 
-For the first four solvers, you can use either the KL divergence `loss.method=kl` or the log-variance divergence `loss.method=lv` (see our [paper](https://arxiv.org/abs/2307.01198)).
+For all solvers except langevin and dds, you can use either the KL divergence `loss.method=kl` or the log-variance divergence `loss.method=lv` (see our [paper](https://arxiv.org/abs/2307.01198)).
 For the first three solvers, the log-variance divergence can also be computed over trajectories with the same initial point by using `loss.method=lv_traj`.
 In most of our experiments, the log-variance divergence led to improved performance.
 

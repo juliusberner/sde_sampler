@@ -14,13 +14,14 @@ class BaseOCLoss:
     def __init__(
         self,
         generative_ctrl: Callable,
-        sde: OU,
+        sde: OU | None = None,
         method: str = "kl",
         traj_per_sample: int = 1,
         filter_samples: Callable | None = None,
         max_rnd: float | None = None,
         sde_ctrl_dropout: float | None = None,
         sde_ctrl_noise: float | None = None,
+        **kwargs,
     ):
         self.generative_ctrl = generative_ctrl
         self.sde = sde
@@ -34,14 +35,11 @@ class BaseOCLoss:
         # Filter
         self.filter_samples = filter_samples
         self.max_rnd = max_rnd
-
-        # SDE controls
         self.sde_ctrl_noise = sde_ctrl_noise
         self.sde_ctrl_dropout = sde_ctrl_dropout
-        if self.method in ["kl", "kl_ito"]:
-            for attr in ["sde_ctrl_noise", "sde_ctrl_dropout"]:
-                if getattr(self, attr) is not None:
-                    logging.warning("%s should only be used for the log-variance loss.")
+        # SDE controls
+        if self.sde is not None and self.method in ["kl", "kl_ito"]:
+            raise ValueError("Method should only be used for the log-variance loss.")
 
         # Metrics
         self.n_filtered = 0
@@ -383,6 +381,120 @@ class ReferenceSDELoss(BaseOCLoss):
             reference_log_prob=reference_log_prob,
             compute_ito_int=compute_weights,
             change_sde_ctrl=False,
+            return_traj=return_traj,
+        )
+        return BaseOCLoss.compute_results(
+            rnd, compute_weights=compute_weights, ts=ts, samples=samples, xs=xs
+        )
+
+
+class ExponentialIntegratorSDELoss(BaseOCLoss):
+    def __init__(self, *args, alpha, sigma, **kwargs):
+        # Only loss.method = KL implemented
+        super().__init__(*args, **kwargs)
+        self.alpha = alpha
+        self.sigma = sigma
+
+    def simulate(
+        self,
+        ts: torch.Tensor,
+        x: torch.Tensor,
+        terminal_unnorm_log_prob: Callable,
+        reference_log_prob: Callable | None = None,  
+        compute_ito_int: bool = False,
+        return_traj: bool = False,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
+
+        rnd = 0.0
+
+        xs = [x] if return_traj else None
+
+        # Simulate
+        # s,t = old time, new time
+        for s, t in zip(ts[:-1], ts[1:]):
+            # Evaluate
+            generative_ctrl = self.generative_ctrl(s, x)
+            dt = t - s
+
+            # Exponential Scheme as implemented by Vargas et.al
+            beta_k = torch.clip(self.alpha * dt.sqrt(), 0, 1)
+            alpha_k = torch.sqrt(1.0 - beta_k**2)
+
+            rnd += (
+                0.5
+                * (beta_k**2)
+                * (self.sigma**2)
+                * (generative_ctrl**2).sum(dim=-1, keepdim=True)
+            )
+
+            noise = torch.randn_like(x)
+
+            x = (
+                x * alpha_k
+                + (beta_k**2) * (self.sigma**2) * generative_ctrl
+                + self.sigma * beta_k * noise
+            )
+
+            # Compute ito integral for importance sampling
+            if compute_ito_int:
+                rnd += (self.sigma * generative_ctrl * noise * beta_k).sum(
+                    dim=-1, keepdim=True
+                )
+
+            if return_traj:
+                xs.append(x)
+
+        # compute reference log prob value based on based in prior
+        reference_log_prob_value = reference_log_prob(x)
+        rnd += reference_log_prob_value - terminal_unnorm_log_prob(x)
+
+        assert rnd.shape == (x.shape[0], 1)  # one loss number for each sample
+
+        if return_traj:
+            xs = torch.stack(xs)
+
+        return x, rnd, xs
+
+    def __call__(
+        self,
+        ts: torch.Tensor,
+        x: torch.Tensor,
+        terminal_unnorm_log_prob: Callable,
+        reference_log_prob: Callable,
+    ) -> tuple[torch.Tensor, dict]:
+        # Repeat initial values
+        if self.traj_per_sample != 1:
+            x = x.repeat(self.traj_per_sample, 1, 1).reshape(-1, x.shape[-1])
+
+        # Simulate: 
+        # Method always kl or kl_ito
+        compute_ito_int = self.method != "kl" 
+        samples, rnd, _ = self.simulate(
+            ts,
+            x,
+            terminal_unnorm_log_prob=terminal_unnorm_log_prob,
+            reference_log_prob=reference_log_prob,
+            compute_ito_int=compute_ito_int,
+            return_traj=False,
+        )
+
+        return self.compute_loss(rnd, samples=samples)
+
+    def eval(
+        self,
+        ts: torch.Tensor,
+        x: torch.Tensor,
+        terminal_unnorm_log_prob: Callable,
+        reference_log_prob: Callable | None = None,
+        compute_weights: bool = True,
+        return_traj: bool = True,
+    ) -> Results:
+        samples, rnd, xs = self.simulate(
+            ts,
+            x,
+            terminal_unnorm_log_prob=terminal_unnorm_log_prob,
+            reference_log_prob=reference_log_prob,
+            compute_ito_int=compute_weights,
             return_traj=return_traj,
         )
         return BaseOCLoss.compute_results(
