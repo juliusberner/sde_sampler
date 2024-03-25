@@ -370,11 +370,11 @@ class ReferenceSDELoss(BaseOCLoss):
 
 
 class ExponentialIntegratorSDELoss(BaseOCLoss):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, alpha, sigma, **kwargs):
         # Only loss.method = KL implemented
         super().__init__(*args, **kwargs)
-        self.alpha = kwargs.get("alpha", 1)
-        self.sigma = kwargs.get("sigma", 1)
+        self.alpha = alpha
+        self.sigma = sigma
 
     def simulate(
         self,
@@ -447,8 +447,9 @@ class ExponentialIntegratorSDELoss(BaseOCLoss):
         if self.traj_per_sample != 1:
             x = x.repeat(self.traj_per_sample, 1, 1).reshape(-1, x.shape[-1])
 
-        # Simulate
-        compute_ito_int = self.method != "kl"
+        # Simulate: 
+        # Method always kl or kl_ito
+        compute_ito_int = self.method != "kl" 
         samples, rnd, _ = self.simulate(
             ts,
             x,
