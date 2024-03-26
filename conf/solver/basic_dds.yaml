@@ -1,7 +1,7 @@
 # @package _global_
 defaults:
-  - oc_base
-  - /prior: gauss_truncate
+  - basic_oc_base
+  - /prior: gauss
   - /sde: 
   - /model@generative_ctrl: score
   - /loss: exponential_sde
@@ -11,18 +11,11 @@ defaults:
 solver:
   _target_: sde_sampler.solver.oc.DDS
 
-train_batch_size: 2048
-
 train_timesteps:
   rescale_t: "cosine"
   steps: 
-  end: 12.8
+  end: 6.4
   dt: 0.05
 
 prior:
   scale: ${loss.sigma}
-
-# Model
-generative_ctrl:
-  clip_score: 10.
-  clip_model: 10.

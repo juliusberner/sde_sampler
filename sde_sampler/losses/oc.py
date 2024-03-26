@@ -35,11 +35,14 @@ class BaseOCLoss:
         # Filter
         self.filter_samples = filter_samples
         self.max_rnd = max_rnd
+
+        # SDE controls
         self.sde_ctrl_noise = sde_ctrl_noise
         self.sde_ctrl_dropout = sde_ctrl_dropout
-        # SDE controls
-        if self.sde is not None and self.method in ["kl", "kl_ito"]:
-            raise ValueError("Method should only be used for the log-variance loss.")
+        if self.method in ["kl", "kl_ito"]:
+            for attr in ["sde_ctrl_noise", "sde_ctrl_dropout"]:
+                if getattr(self, attr) is not None:
+                    logging.warning("%s should only be used for the log-variance loss.")
 
         # Metrics
         self.n_filtered = 0
@@ -389,8 +392,7 @@ class ReferenceSDELoss(BaseOCLoss):
 
 
 class ExponentialIntegratorSDELoss(BaseOCLoss):
-    def __init__(self, *args, alpha, sigma, **kwargs):
-        # Only loss.method = KL implemented
+    def __init__(self, *args, alpha: float, sigma: float, **kwargs):
         super().__init__(*args, **kwargs)
         self.alpha = alpha
         self.sigma = sigma
@@ -400,42 +402,41 @@ class ExponentialIntegratorSDELoss(BaseOCLoss):
         ts: torch.Tensor,
         x: torch.Tensor,
         terminal_unnorm_log_prob: Callable,
-        reference_log_prob: Callable | None = None,  
+        reference_log_prob: Callable,
         compute_ito_int: bool = False,
+        change_sde_ctrl: bool = False,
         return_traj: bool = False,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
-
+        # Initial cost
         rnd = 0.0
 
         xs = [x] if return_traj else None
 
         # Simulate
-        # s,t = old time, new time
         for s, t in zip(ts[:-1], ts[1:]):
             # Evaluate
-            generative_ctrl = self.generative_ctrl(s, x)
+            if change_sde_ctrl:
+                generative_ctrl, sde_ctrl = self.generative_and_sde_ctrl(s, x)
+                running_cost = (
+                    generative_ctrl * (sde_ctrl - 0.5 * generative_ctrl)
+                ).sum(dim=-1, keepdim=True)
+            else:
+                sde_ctrl = generative_ctrl = self.generative_ctrl(s, x)
+                running_cost = 0.5 * (generative_ctrl**2).sum(dim=-1, keepdim=True)
             dt = t - s
 
-            # Exponential Scheme as implemented by Vargas et.al
+            # Exponential integrator as implemented by Vargas et.al
             beta_k = torch.clip(self.alpha * dt.sqrt(), 0, 1)
             alpha_k = torch.sqrt(1.0 - beta_k**2)
-
-            rnd += (
-                0.5
-                * (beta_k**2)
-                * (self.sigma**2)
-                * (generative_ctrl**2).sum(dim=-1, keepdim=True)
-            )
-
+            rnd += beta_k**2 * self.sigma**2 * running_cost
             noise = torch.randn_like(x)
-
             x = (
                 x * alpha_k
-                + (beta_k**2) * (self.sigma**2) * generative_ctrl
+                + (beta_k**2) * (self.sigma**2) * sde_ctrl
                 + self.sigma * beta_k * noise
             )
 
-            # Compute ito integral for importance sampling
+            # Compute ito integral
             if compute_ito_int:
                 rnd += (self.sigma * generative_ctrl * noise * beta_k).sum(
                     dim=-1, keepdim=True
@@ -466,15 +467,16 @@ class ExponentialIntegratorSDELoss(BaseOCLoss):
         if self.traj_per_sample != 1:
             x = x.repeat(self.traj_per_sample, 1, 1).reshape(-1, x.shape[-1])
 
-        # Simulate: 
-        # Method always kl or kl_ito
-        compute_ito_int = self.method != "kl" 
+        # Simulate
+        compute_ito_int = self.method != "kl"
+        change_sde_ctrl = self.method in ["lv", "lv_traj"]
         samples, rnd, _ = self.simulate(
             ts,
             x,
             terminal_unnorm_log_prob=terminal_unnorm_log_prob,
             reference_log_prob=reference_log_prob,
             compute_ito_int=compute_ito_int,
+            change_sde_ctrl=change_sde_ctrl,
             return_traj=False,
         )
 
@@ -495,6 +497,7 @@ class ExponentialIntegratorSDELoss(BaseOCLoss):
             terminal_unnorm_log_prob=terminal_unnorm_log_prob,
             reference_log_prob=reference_log_prob,
             compute_ito_int=compute_weights,
+            change_sde_ctrl=False,
             return_traj=return_traj,
         )
         return BaseOCLoss.compute_results(
