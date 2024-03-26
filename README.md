@@ -1,5 +1,5 @@
 # Sampling via learned diffusions: `sde_sampler`
-> Accompanying code for the paper ['Improved sampling via learned diffusions'](https://arxiv.org/abs/2307.01198) [[`ICLR'24`](https://openreview.net/forum?id=h4pNROsO06),[`BibTeX`](#references)] and ['An optimal control perspective on diffusion-based generative modeling'](https://arxiv.org/abs/2211.01364) [[`SBM@NeurIPS'22`](https://openreview.net/forum?id=jlgs_E-0UdM),[`BibTeX`](#references)].
+> Accompanying code for the paper ['Improved sampling via learned diffusions'](https://arxiv.org/abs/2307.01198) [[`ICLR'24`](https://openreview.net/forum?id=h4pNROsO06),[`BibTeX`](#references)] and ['An optimal control perspective on diffusion-based generative modeling'](https://arxiv.org/abs/2211.01364) [[`TMLR'24`](https://openreview.net/forum?id=oYIjw37pTP),[`BibTeX`](#references)].
 
 This repo contains various [methods](#solvers) (DIS, Bridge, DDS, PIS) to sample from unnormalized densities by learning to control stochastic differential equations (SDEs). Given an unnormalized target density $\rho=Zp_{\mathrm{target}}$, where $Z = \int \rho(x) \mathrm{d}x$, we optimize a neural network $u$ to control the SDE $$\mathrm{d}X^u_t = (\mu + \sigma u)(X^u_t,t) \mathrm{d}t + \sigma(t) \mathrm{d}W_t, \quad X^u_0 \sim p_{\mathrm{prior}},$$ 
 such that $X^u_T \sim p_{\mathrm{target}}$. Then one can sample from the prior $p_{\mathrm{prior}}$ and simulate the SDE $X^u$ to obtain samples from $p_{\mathrm{target}}$.
@@ -199,11 +199,13 @@ Our predefined targets in [`conf/target`](conf/target) include the following dis
 If you use parts of this codebase in your research, please use the following BibTeX entries.
 
 ```
-@inproceedings{berner2022optimal,
+@article{berner2024optimal,
   title={An optimal control perspective on diffusion-based generative modeling},
   author={Berner, Julius and Richter, Lorenz and Ullrich, Karen},
-  booktitle={NeurIPS 2022 Workshop on Score-Based Methods},
-  year={2022}
+  journal={Transactions on Machine Learning Research},
+  issn={2835-8856},
+  year={2024},
+  url={https://openreview.net/forum?id=oYIjw37pTP},
 }
 
 @inproceedings{richter2024improved,
