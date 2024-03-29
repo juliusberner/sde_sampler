@@ -4,7 +4,7 @@ defaults:
   - /prior: gauss_truncate
   - /sde: vp_10
   - /model@generative_ctrl: clipped
-  - /loss: time_reversal_lv_traj
+  - /loss: time_reversal_lv
   - _self_
 
 # Solver

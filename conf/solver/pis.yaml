@@ -4,7 +4,7 @@ defaults:
   - /prior: delta
   - /sde: bm_pis
   - /model@generative_ctrl: score
-  - /loss: reference_sde_lv_traj
+  - /loss: reference_sde_lv
   - _self_
 
 # Solver

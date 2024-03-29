@@ -4,7 +4,7 @@ defaults:
   - /prior: gauss_truncate
   - /sde: vp_10
   - /model@generative_ctrl: potential
-  - /loss: time_reversal
+  - /loss: time_reversal_lv
   - _self_
 
 # Solver
@@ -19,10 +19,7 @@ lerp_domain: True
 
 # Loss
 loss:
-  method: lv
   max_rnd: 1e4
-
-train_batch_size: 2048
 
 # Model
 generative_ctrl:

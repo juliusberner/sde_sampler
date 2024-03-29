@@ -4,9 +4,14 @@ defaults:
   - /prior: gauss_truncate
   - /sde: vp_10
   - /model@generative_ctrl: score
-  - /loss: reference_sde_lv_traj
+  - /loss: reference_sde_lv
   - _self_
 
 # Solver
 solver:
   _target_: sde_sampler.solver.oc.EulerDDS
+
+# Model
+generative_ctrl:
+  clip_score: 10.
+  clip_model: 10.

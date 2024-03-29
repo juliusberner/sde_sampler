@@ -4,7 +4,7 @@ defaults:
   - /prior: gauss
   - /sde: vp_10
   - /model@generative_ctrl: potential
-  - /loss: time_reversal
+  - /loss: time_reversal_lv
   - _self_
 
 # Solver
@@ -16,7 +16,3 @@ subtraj_prob: 0.5
 fix_terminal: True
 subtraj_steps:
 lerp_domain: True
-
-# Loss
-loss:
-  method: lv

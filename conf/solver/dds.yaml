@@ -4,14 +4,12 @@ defaults:
   - /prior: gauss_truncate
   - /sde: 
   - /model@generative_ctrl: score
-  - /loss: exponential_sde
+  - /loss: exponential_sde_lv
   - _self_
 
 # Solver
 solver:
   _target_: sde_sampler.solver.oc.DDS
-
-train_batch_size: 2048
 
 train_timesteps:
   rescale_t: "cosine"

@@ -10,7 +10,7 @@ defaults:
 
 # Train
 train_steps: 60000
-train_batch_size: 128
+train_batch_size: 2048
 train_timesteps:
   _target_: sde_sampler.utils.common.get_timesteps
   _partial_: True
