@@ -235,7 +235,7 @@ class Solver(torch.nn.Module):
             wandb_utils.upload_ckpt(path, name=name)
         return path
 
-    def load_checkpoint(self, ckpt_file: str | Path | None):
+    def load_checkpoint(self, ckpt_file: str | Path | None = None):
         if ckpt_file is None:
             ckpt_file = self.latest_checkpoint()
         if ckpt_file is not None:
