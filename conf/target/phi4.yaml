@@ -1,4 +1,5 @@
 _target_: sde_sampler.distr.phi4.Phi4Distr
 kappa: 0.3
 lambd : 0.022
-dim: 64
+dim: 4
+lat_shape: [2, 2]
