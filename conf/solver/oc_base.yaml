@@ -27,12 +27,6 @@ optim:
   _target_: torch.optim.Adam
   lr: 0.005
   weight_decay: 1e-7
-grad_clip:
-  _target_: torch.nn.utils.clip_grad_norm_
-  _partial_: True
-  max_norm: 1.
-  norm_type: 2.0
-  error_if_nonfinite: False
 ema_device:
 
 # Eval and checkpointing
