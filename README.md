@@ -1,6 +1,10 @@
 # Sampling via learned diffusions: `sde_sampler`
 > Accompanying code for the paper ['Improved sampling via learned diffusions'](https://arxiv.org/abs/2307.01198) [[`ICLR'24`](https://openreview.net/forum?id=h4pNROsO06),[`BibTeX`](#references)] and ['An optimal control perspective on diffusion-based generative modeling'](https://arxiv.org/abs/2211.01364) [[`TMLR'24`](https://openreview.net/forum?id=oYIjw37pTP),[`BibTeX`](#references)].
 
+
+> For improved performance, see ['Sequential Controlled Langevin Diffusions'](https://github.com/anonymous3141/SCLD) [[`ICLR'25`](https://openreview.net/forum?id=dImD2sgy86)] (combinations with SMC) and ['Underdamped Diffusion Bridges with Applications to Sampling'](https://github.com/DenisBless/UnderdampedDiffusionBridges) [[`ICLR'25`](https://openreview.net/forum?id=Q1QTxFm0Is)] (underdamped versions).
+
+
 This repo contains various [methods](#solvers) (DIS, Bridge, DDS, PIS) to sample from unnormalized densities by learning to control stochastic differential equations (SDEs). Given an unnormalized target density $\rho=Zp_{\mathrm{target}}$, where $Z = \int \rho(x) \mathrm{d}x$, we optimize a neural network $u$ to control the SDE $$\mathrm{d}X^u_t = (\mu + \sigma u)(X^u_t,t) \mathrm{d}t + \sigma(t) \mathrm{d}W_t, \quad X^u_0 \sim p_{\mathrm{prior}},$$ 
 such that $X^u_T \sim p_{\mathrm{target}}$. Then one can sample from the prior $p_{\mathrm{prior}}$ and simulate the SDE $X^u$ to obtain samples from $p_{\mathrm{target}}$.
 
